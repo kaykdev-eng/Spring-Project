@@ -2,9 +2,13 @@ package com.projetoSpring.project.services;
 
 import com.projetoSpring.project.entities.User;
 import com.projetoSpring.project.repositories.UserRepository;
+import com.projetoSpring.project.services.exceptions.DatabaseException;
 import com.projetoSpring.project.services.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -28,11 +32,19 @@ public class UserService {
         return userRepository.save(obj);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public void delete(Long id) {
-        userRepository.deleteById(id);
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException(id);
+        }
+        try{
+            userRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException(e.getMessage());
+        }
     }
 
+    @Transactional
     public User update(Long id, User user) {
         User entity = userRepository.getReferenceById(id);
         updateData(entity, user);
